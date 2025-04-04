@@ -13,7 +13,7 @@ export function TooltipProvider({ children }) {
       {children}
       {tooltip && (
         <div
-          className="absolute z-50 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded shadow-sm pointer-events-none"
+          className="absolute z-50 px-2 py-1 text-xs font-medium text-white rounded shadow-sm pointer-events-none"
           style={{
             top: tooltip.y + 10,
             left: tooltip.x,
