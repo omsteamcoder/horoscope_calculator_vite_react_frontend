@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useDrag, useDrop } from "react-dnd"
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./Tooltip"
 
-// Add custom screen size for extra small devices
+// Custom styles for extra small devices
 const customStyles = `
   @media (min-width: 400px) {
     .xs\\:grid-cols-2 {
@@ -13,7 +13,7 @@ const customStyles = `
   }
 `
 
-// Update the DraggablePlanet component to be more compact on mobile
+// Draggable planet component for planets
 const DraggablePlanet = ({ planet, abbreviation, isSelected, onClick, planetNames }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "planet",
@@ -47,8 +47,17 @@ const DraggablePlanet = ({ planet, abbreviation, isSelected, onClick, planetName
   )
 }
 
-// Update the DroppableHouse component to enhance drop zone visibility
-const DroppableHouse = ({ house, onDrop, children, isAscendant, onHouseClick, isDroppable, isHighlighted }) => {
+// Droppable house component
+const DroppableHouse = ({
+  house,
+  onDrop,
+  children,
+  isAscendant,
+  onHouseClick,
+  isDroppable,
+  isHighlighted,
+  rasiName,
+}) => {
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: "planet",
     drop: (item) => onDrop(house.house, item.planet),
@@ -72,8 +81,13 @@ const DroppableHouse = ({ house, onDrop, children, isAscendant, onHouseClick, is
         ${isDroppable ? "cursor-pointer hover:bg-purple-50" : ""}
         ${isHighlighted ? "ring-2 ring-amber-400" : ""}
       `}
+      style={{
+        gridColumnStart: house.col + 1,
+        gridRowStart: house.row + 1,
+      }}
     >
       <div className="text-xs text-gray-600 self-start font-medium">{house.house}</div>
+      <div className="text-xs text-green-700 self-start font-medium">{rasiName}</div>
       {isDroppable && isOver && (
         <div className="absolute inset-0 bg-purple-200 bg-opacity-40 flex items-center justify-center pointer-events-none">
           <div className="text-purple-600 font-medium text-sm">Drop Here</div>
@@ -85,145 +99,212 @@ const DroppableHouse = ({ house, onDrop, children, isAscendant, onHouseClick, is
   )
 }
 
-// Update the EditableHoroscopeChart component to receive control state from props
-function EditableHoroscopeChart({
-  chartData,
-  chartType,
-  onChartUpdate,
-  // New props for control state
-  editMode,
-  selectedPlanet,
-  setSelectedPlanet,
-}) {
-  // Remove the editMode and selectedPlanet state as they're now passed as props
-  // const [editMode, setEditMode] = useState(false)
-  // const [selectedPlanet, setSelectedPlanet] = useState(null)
-
+// The main HoroscopeChart component
+function EditableHoroscopeChart({ chartData, chartType, onChartUpdate, editMode, selectedPlanet, setSelectedPlanet }) {
   const [customPlanetPositions, setCustomPlanetPositions] = useState({})
   const [highlightedHouse, setHighlightedHouse] = useState(null)
   const chartRef = useRef(null)
 
-  // Planet abbreviations for display in the chart
+  // Define planet abbreviations
   const planetAbbreviations = {
-    SUN: "சூ",
-    MOON: "சந்",
-    MARS: "செவ்",
-    MERCURY: "புத",
-    JUPITER: "குரு",
-    VENUS: "சுக்",
-    SATURN: "சனி",
-    RAHU: "ராகு",
-    KETU: "கேது",
+    சூரியன்: "சூ", // Sun
+    சந்திரன்: "சந்", // Moon
+    செவ்வாய்: "செவ்", // Mars
+    புதன்: "புத", // Mercury
+    குரு: "குரு", // Jupiter
+    சுக்ரன்: "சுக்", // Venus
+    சனி: "சனி", // Saturn
+    ராகு: "ராகு", // Rahu
+    கேது: "கேது", // Ketu
   }
 
-  // Planet names in Tamil and English
+  // Map Tamil planet names to English codes (used for internal tracking)
+  const planetCodes = {
+    சூரியன்: "SUN",
+    சந்திரன்: "MOON",
+    செவ்வாய்: "MARS",
+    புதன்: "MERCURY",
+    குரு: "JUPITER",
+    சுக்ரன்: "VENUS",
+    சனி: "SATURN",
+    ராகு: "RAHU",
+    கேது: "KETU",
+    லக்னம்: "ASC",
+  }
+
+  // Reverse map for looking up Tamil names
   const planetNames = {
     SUN: { tamil: "சூரியன்", english: "Sun" },
     MOON: { tamil: "சந்திரன்", english: "Moon" },
     MARS: { tamil: "செவ்வாய்", english: "Mars" },
     MERCURY: { tamil: "புதன்", english: "Mercury" },
     JUPITER: { tamil: "குரு", english: "Jupiter" },
-    VENUS: { tamil: "சுக்கிரன்", english: "Venus" },
+    VENUS: { tamil: "சுக்ரன்", english: "Venus" },
     SATURN: { tamil: "சனி", english: "Saturn" },
     RAHU: { tamil: "ராகு", english: "Rahu" },
     KETU: { tamil: "கேது", english: "Ketu" },
+    ASC: { tamil: "லக்னம்", english: "Ascendant" },
   }
 
-  // Rasi (zodiac) names in Tamil and English
-  const rasiNames = [
-    { tamil: "மேஷம்", english: "Aries" },
-    { tamil: "ரிஷபம்", english: "Taurus" },
-    { tamil: "மிதுனம்", english: "Gemini" },
-    { tamil: "கடகம்", english: "Cancer" },
-    { tamil: "சிம்மம்", english: "Leo" },
-    { tamil: "கன்னி", english: "Virgo" },
-    { tamil: "துலாம்", english: "Libra" },
-    { tamil: "விருச்சிகம்", english: "Scorpio" },
-    { tamil: "தனுசு", english: "Sagittarius" },
-    { tamil: "மகரம்", english: "Capricorn" },
-    { tamil: "கும்பம்", english: "Aquarius" },
-    { tamil: "மீனம்", english: "Pisces" },
+  // Rasi (zodiac) names in Tamil
+  const rasiOrder = [
+    "மேஷம்", // Aries
+    "ரிஷபம்", // Taurus
+    "மிதுனம்", // Gemini
+    "கடகம்", // Cancer
+    "சிம்மம்", // Leo
+    "கன்னி", // Virgo
+    "துலாம்", // Libra
+    "விருச்சிகம்", // Scorpio
+    "தனுசு", // Sagittarius
+    "மகரம்", // Capricorn
+    "கும்பம்", // Aquarius
+    "மீனம்", // Pisces
   ]
 
-  // Traditional South Indian chart layout (houses indexed from 1)
+  // English rasi names for reference
+  const rasiOrderEnglish = [
+    "Aries",
+    "Taurus",
+    "Gemini",
+    "Cancer",
+    "Leo",
+    "Virgo",
+    "Libra",
+    "Scorpio",
+    "Sagittarius",
+    "Capricorn",
+    "Aquarius",
+    "Pisces",
+  ]
+
+  // Tamil rasi names to index mapping for calculations
+  const rasiIndices = {
+    மேஷம்: 0,
+    ரிஷபம்: 1,
+    மிதுனம்: 2,
+    கடகம்: 3,
+    சிம்மம்: 4,
+    கன்னி: 5,
+    துலாம்: 6,
+    விருச்சிகம்: 7,
+    தனுசு: 8,
+    மகரம்: 9,
+    கும்பம்: 10,
+    மீனம்: 11,
+  }
+
+  // Fixed traditional layout based on the image provided
+  // This layout matches the standard South Indian chart format
   const traditionalLayout = [
-    // Houses 1-12
-    { house: 1, row: 0, col: 3, planets: [] },
-    { house: 2, row: 0, col: 2, planets: [] },
-    { house: 3, row: 0, col: 1, planets: [] },
-    { house: 4, row: 0, col: 0, planets: [] },
-    { house: 5, row: 1, col: 0, planets: [] },
-    { house: 6, row: 2, col: 0, planets: [] },
-    { house: 7, row: 3, col: 0, planets: [] },
-    { house: 8, row: 3, col: 1, planets: [] },
-    { house: 9, row: 3, col: 2, planets: [] },
-    { house: 10, row: 3, col: 3, planets: [] },
-    { house: 11, row: 2, col: 3, planets: [] },
-    { house: 12, row: 1, col: 3, planets: [] },
+    { house: 1, row: 0, col: 1, planets: [] }, // Aries (top row, second from left)
+    { house: 2, row: 0, col: 2, planets: [] }, // Taurus (top row, third from left)
+    { house: 3, row: 0, col: 3, planets: [] }, // Gemini (top row, rightmost)
+    { house: 4, row: 1, col: 3, planets: [] }, // Cancer (right column, top)
+    { house: 5, row: 2, col: 3, planets: [] }, // Leo (right column, middle)
+    { house: 6, row: 3, col: 3, planets: [] }, // Virgo (right column, bottom)
+    { house: 7, row: 3, col: 2, planets: [] }, // Libra (bottom row, third from left)
+    { house: 8, row: 3, col: 1, planets: [] }, // Scorpio (bottom row, second from left)
+    { house: 9, row: 3, col: 0, planets: [] }, // Sagittarius (bottom row, leftmost)
+    { house: 10, row: 2, col: 0, planets: [] }, // Capricorn (left column, bottom)
+    { house: 11, row: 1, col: 0, planets: [] }, // Aquarius (left column, middle)
+    { house: 12, row: 0, col: 0, planets: [] }, // Pisces (left column, top)
   ]
 
-  // Calculate the ascendant house (lagna)
-  const ascendantDegree = chartData?.ascendant?.degrees || 0
-  const ascendantRasi = Math.floor(ascendantDegree / 30) % 12
-
-  // Default planet positions based on chart type
-  const getDefaultPlanetPositions = () => {
-    if (chartType === "rasi") {
-      return {
-        SUN: 2, // Gemini (Mithunam)
-        MOON: 11, // Aquarius (Kumbam)
-        MARS: 12, // Pisces (Meenam)
-        MERCURY: 1, // Taurus (Rishabam)
-        JUPITER: 2, // Gemini (Mithunam)
-        VENUS: 0, // Aries (Mesham)
-        SATURN: 10, // Capricorn (Makaram)
-        RAHU: 10, // Capricorn (Makaram)
-        KETU: 4, // Cancer (Kadakam)
-      }
-    } else {
-      return {
-        SUN: 1, // Position for Navamsa
-        MOON: 3, // Position for Navamsa
-        MARS: 10, // Position for Navamsa
-        MERCURY: 2, // Position for Navamsa
-        JUPITER: 2, // Position for Navamsa
-        VENUS: 0, // Position for Navamsa
-        SATURN: 10, // Position for Navamsa
-        RAHU: 8, // Position for Navamsa
-        KETU: 2, // Position for Navamsa
-      }
-    }
+  // Fixed mapping of houses to rasis based on the traditional layout
+  const fixedHouseToRasiMap = {
+    1: "மேஷம்", // Aries
+    2: "ரிஷபம்", // Taurus
+    3: "மிதுனம்", // Gemini
+    4: "கடகம்", // Cancer
+    5: "சிம்மம்", // Leo
+    6: "கன்னி", // Virgo
+    7: "துலாம்", // Libra
+    8: "விருச்சிகம்", // Scorpio
+    9: "தனுசு", // Sagittarius
+    10: "மகரம்", // Capricorn
+    11: "கும்பம்", // Aquarius
+    12: "மீனம்", // Pisces
   }
 
-  // Get current planet positions (either custom or default)
-  const getPlanetPositions = () => {
-    const defaultPositions = getDefaultPlanetPositions()
-    return { ...defaultPositions, ...customPlanetPositions }
+  // Always use the main lagna rasi for both charts to maintain consistency
+  const lagnaRasi = chartData?.Lagna || "கடகம்" // Default to Cancer if no data
+  const ascendantRasi = rasiIndices[lagnaRasi]
+
+  // Get the house assignments for either rasi or navamsa chart
+  const getHouseAssignments = () => {
+    if (!chartData) return {}
+
+    // Choose the correct house data based on chart type
+    const houseData = chartType === "rasi" ? chartData.rasi_houses : chartData.navamsa_houses
+
+    if (!houseData) return {}
+
+    // Create a mapping of house numbers to planet arrays
+    const assignments = {}
+
+    // For each house, find the corresponding rasi and get its planets
+    Object.entries(fixedHouseToRasiMap).forEach(([houseNumber, rasi]) => {
+      if (houseData[rasi]) {
+        assignments[houseNumber] = houseData[rasi].map((planet) => planetCodes[planet] || planet)
+      } else {
+        assignments[houseNumber] = []
+      }
+    })
+
+    return assignments
   }
 
-  // Assign planets to houses based on positions
+  // Assign planets to houses based on the chart type
   const assignPlanetsToHouses = () => {
     // Clear existing planets
     traditionalLayout.forEach((house) => {
       house.planets = []
     })
 
-    const planetPositions = getPlanetPositions()
+    // Get house assignments for current chart type
+    const houseAssignments = getHouseAssignments()
 
     // Assign planets to houses
-    Object.entries(planetPositions).forEach(([planet, position]) => {
-      const houseIndex = (position - ascendantRasi + 12) % 12
-      const houseNumber = houseIndex + 1 // Convert to 1-indexed house number
+    Object.entries(houseAssignments).forEach(([houseNumber, planets]) => {
+      const house = traditionalLayout.find((h) => h.house === Number.parseInt(houseNumber))
+      if (house && Array.isArray(planets)) {
+        house.planets = planets.filter(Boolean) // Filter out any empty strings
+      }
+    })
 
-      const house = traditionalLayout.find((h) => h.house === houseNumber)
-      if (house) {
-        house.planets.push(planet)
+    // Apply any custom positions from edit mode
+    Object.entries(customPlanetPositions).forEach(([planet, position]) => {
+      // Find which house this position corresponds to
+      const houseNumber = ((position - ascendantRasi + 12) % 12) + 1
+
+      // Remove planet from all houses first (to avoid duplicates)
+      traditionalLayout.forEach((house) => {
+        house.planets = house.planets.filter((p) => p !== planet)
+      })
+
+      // Add planet to the new house
+      const targetHouse = traditionalLayout.find((h) => h.house === houseNumber)
+      if (targetHouse) {
+        targetHouse.planets.push(planet)
       }
     })
   }
 
-  // Call the assignment function
+  // Execute the assignment function
   assignPlanetsToHouses()
+
+  // Find which house contains the lagna (ascendant)
+  const findLagnaHouse = () => {
+    // Find the house that contains ASC (lagna)
+    for (const house of traditionalLayout) {
+      if (house.planets.includes("ASC")) {
+        return house.house
+      }
+    }
+    // If not found in planets, it should be in house 1 by default
+    return 1
+  }
 
   // Handle house click in edit mode
   const handleHouseClick = (houseNumber) => {
@@ -243,7 +324,7 @@ function EditableHoroscopeChart({
       onChartUpdate({
         chartType,
         positions: {
-          ...getPlanetPositions(),
+          ...customPlanetPositions,
           [selectedPlanet]: position,
         },
       })
@@ -252,7 +333,7 @@ function EditableHoroscopeChart({
     // Clear selection after placing
     setSelectedPlanet(null)
 
-    // Show a visual feedback of where planet was placed
+    // Show visual feedback
     setHighlightedHouse(houseNumber)
     setTimeout(() => setHighlightedHouse(null), 1000)
   }
@@ -273,13 +354,13 @@ function EditableHoroscopeChart({
       onChartUpdate({
         chartType,
         positions: {
-          ...getPlanetPositions(),
+          ...customPlanetPositions,
           [planet]: position,
         },
       })
     }
 
-    // Show a visual feedback of where planet was placed
+    // Show visual feedback
     setHighlightedHouse(houseNumber)
     setTimeout(() => setHighlightedHouse(null), 1000)
   }
@@ -287,19 +368,17 @@ function EditableHoroscopeChart({
   // Get planet position display name
   const getPlanetPositionName = (position) => {
     const rasiIndex = position % 12
-    return `${rasiNames[rasiIndex].tamil} (${rasiNames[rasiIndex].english})`
+    return rasiOrder[rasiIndex]
   }
 
-  // Add custom styles to the component
+  // Add custom styles once on component mount
   useEffect(() => {
-    // Check if the style element already exists
     if (!document.getElementById("custom-xs-styles")) {
       const styleElement = document.createElement("style")
       styleElement.id = "custom-xs-styles"
       styleElement.innerHTML = customStyles
       document.head.appendChild(styleElement)
 
-      // Clean up on unmount
       return () => {
         const existingStyle = document.getElementById("custom-xs-styles")
         if (existingStyle) {
@@ -309,10 +388,50 @@ function EditableHoroscopeChart({
     }
   }, [])
 
+  // Reset custom positions when chart data or type changes
   useEffect(() => {
-    // Reset customPlanetPositions when chartData changes or when explicitly reset
     setCustomPlanetPositions({})
   }, [chartData, chartType])
+
+  // Get the current planet positions for display in the table
+  const getCurrentPositions = () => {
+    const positions = {}
+
+    // Loop through all houses to extract planet positions
+    traditionalLayout.forEach((house) => {
+      if (house.planets && house.planets.length > 0) {
+        // Get the rasi for this house
+        const rasi = fixedHouseToRasiMap[house.house]
+        const rasiIndex = rasiIndices[rasi]
+
+        // Assign this position to each planet in the house
+        house.planets.forEach((planet) => {
+          positions[planet] = rasiIndex
+        })
+      }
+    })
+
+    return positions
+  }
+
+  // Find the lagna house
+  const lagnaHouse = findLagnaHouse()
+
+  // Get the actual navamsa lagna rasi for display in the center
+  const getNavamsaLagnaRasi = () => {
+    if (!chartData || chartType !== "navamsa") return lagnaRasi
+
+    // For navamsa chart, find where lagna is placed
+    const navamsaHouses = chartData.navamsa_houses || {}
+    for (const [rasi, planets] of Object.entries(navamsaHouses)) {
+      if (planets.includes("லக்னம்")) {
+        return rasi
+      }
+    }
+    return lagnaRasi
+  }
+
+  const displayRasi = chartType === "rasi" ? chartData?.rasi || "கும்பம்" : getNavamsaLagnaRasi()
 
   return (
     <TooltipProvider>
@@ -322,16 +441,17 @@ function EditableHoroscopeChart({
           ref={chartRef}
           className="grid grid-cols-4 grid-rows-4 border-2 border-green-500 rounded-xl overflow-hidden aspect-square bg-green-50 max-w-[480px] mx-auto shadow-md"
         >
-          {/* Top row (houses 4, 3, 2, 1) */}
-          {traditionalLayout.slice(0, 4).map((house) => (
+          {/* Render all houses */}
+          {traditionalLayout.map((house) => (
             <DroppableHouse
               key={`house-${house.house}`}
               house={house}
               onDrop={handlePlanetDrop}
-              isAscendant={house.house === 1}
+              isAscendant={house.house === lagnaHouse}
               onHouseClick={handleHouseClick}
               isDroppable={editMode}
               isHighlighted={house.house === highlightedHouse}
+              rasiName={fixedHouseToRasiMap[house.house]}
             >
               <div className="flex-grow flex flex-wrap content-center justify-center gap-1 p-1">
                 {house.planets.map((planet) => (
@@ -350,11 +470,11 @@ function EditableHoroscopeChart({
                           }
                         }}
                       >
-                        {planetAbbreviations[planet]}
+                        {planetNames[planet] ? planetAbbreviations[planetNames[planet].tamil] : planet}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {planetNames[planet].english} ({planetNames[planet].tamil})
+                      {planetNames[planet] ? `${planetNames[planet].english} (${planetNames[planet].tamil})` : planet}
                     </TooltipContent>
                   </Tooltip>
                 ))}
@@ -362,234 +482,43 @@ function EditableHoroscopeChart({
             </DroppableHouse>
           ))}
 
-          {/* Middle rows with center */}
-          <DroppableHouse
-            house={traditionalLayout[4]} // House 5
-            onDrop={handlePlanetDrop}
-            isAscendant={false}
-            onHouseClick={handleHouseClick}
-            isDroppable={editMode}
-            isHighlighted={5 === highlightedHouse}
-          >
-            <div className="flex-grow flex flex-wrap content-center justify-center gap-1 p-1">
-              {traditionalLayout
-                .find((h) => h.house === 5)
-                ?.planets.map((planet) => (
-                  <Tooltip key={planet}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={`
-                          text-[10px] sm:text-sm px-1 sm:px-1.5 py-0.5 rounded
-                          ${editMode ? "cursor-pointer hover:bg-indigo-100" : ""}
-                          ${selectedPlanet === planet ? "bg-indigo-100 text-indigo-800" : ""}
-                        `}
-                        onClick={(e) => {
-                          if (editMode) {
-                            e.stopPropagation()
-                            setSelectedPlanet(planet)
-                          }
-                        }}
-                      >
-                        {planetAbbreviations[planet]}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {planetNames[planet].english} ({planetNames[planet].tamil})
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-            </div>
-          </DroppableHouse>
-
           {/* Center cell spanning 2x2 */}
-          <div className="col-span-2 row-span-2 border border-green-600 flex items-center justify-center bg-white">
+          <div
+            className="col-span-2 row-span-2 border border-green-600 flex items-center justify-center bg-white"
+            style={{
+              gridColumnStart: 2,
+              gridRowStart: 2,
+            }}
+          >
             <div className="text-center p-1 sm:p-2">
               <div className="text-lg sm:text-xl font-bold text-red-600 mb-0.5 sm:mb-1">
                 {chartType === "rasi" ? "ராசி" : "நவாம்சம்"}
               </div>
-              {chartType === "rasi" && (
-                <div className="text-base sm:text-lg text-red-600">{chartData?.rasi || "கும்பம்"}</div>
-              )}
+              <div className="text-base sm:text-lg text-red-600">{displayRasi}</div>
               {editMode && (
                 <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-indigo-600 bg-indigo-50 p-0.5 sm:p-1 rounded">
-                  {selectedPlanet ? `Place ${planetNames[selectedPlanet].english}` : "Select planet"}
+                  {selectedPlanet ? `Place ${planetNames[selectedPlanet]?.english || selectedPlanet}` : "Select planet"}
                 </div>
               )}
             </div>
           </div>
-
-          <DroppableHouse
-            house={traditionalLayout[11]} // House 12
-            onDrop={handlePlanetDrop}
-            isAscendant={false}
-            onHouseClick={handleHouseClick}
-            isDroppable={editMode}
-            isHighlighted={12 === highlightedHouse}
-          >
-            <div className="flex-grow flex flex-wrap content-center justify-center gap-1 p-1">
-              {traditionalLayout
-                .find((h) => h.house === 12)
-                ?.planets.map((planet) => (
-                  <Tooltip key={planet}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={`
-                          text-[10px] sm:text-sm px-1 sm:px-1.5 py-0.5 rounded
-                          ${editMode ? "cursor-pointer hover:bg-indigo-100" : ""}
-                          ${selectedPlanet === planet ? "bg-indigo-100 text-indigo-800" : ""}
-                        `}
-                        onClick={(e) => {
-                          if (editMode) {
-                            e.stopPropagation()
-                            setSelectedPlanet(planet)
-                          }
-                        }}
-                      >
-                        {planetAbbreviations[planet]}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {planetNames[planet].english} ({planetNames[planet].tamil})
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-            </div>
-          </DroppableHouse>
-
-          <DroppableHouse
-            house={traditionalLayout[5]} // House 6
-            onDrop={handlePlanetDrop}
-            isAscendant={false}
-            onHouseClick={handleHouseClick}
-            isDroppable={editMode}
-            isHighlighted={6 === highlightedHouse}
-          >
-            <div className="flex-grow flex flex-wrap content-center justify-center gap-1 p-1">
-              {traditionalLayout
-                .find((h) => h.house === 6)
-                ?.planets.map((planet) => (
-                  <Tooltip key={planet}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={`
-                          text-[10px] sm:text-sm px-1 sm:px-1.5 py-0.5 rounded
-                          ${editMode ? "cursor-pointer hover:bg-indigo-100" : ""}
-                          ${selectedPlanet === planet ? "bg-indigo-100 text-indigo-800" : ""}
-                        `}
-                        onClick={(e) => {
-                          if (editMode) {
-                            e.stopPropagation()
-                            setSelectedPlanet(planet)
-                          }
-                        }}
-                      >
-                        {planetAbbreviations[planet]}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {planetNames[planet].english} ({planetNames[planet].tamil})
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-            </div>
-          </DroppableHouse>
-
-          <DroppableHouse
-            house={traditionalLayout[10]} // House 11
-            onDrop={handlePlanetDrop}
-            isAscendant={false}
-            onHouseClick={handleHouseClick}
-            isDroppable={editMode}
-            isHighlighted={11 === highlightedHouse}
-          >
-            <div className="flex-grow flex flex-wrap content-center justify-center gap-1 p-1">
-              {traditionalLayout
-                .find((h) => h.house === 11)
-                ?.planets.map((planet) => (
-                  <Tooltip key={planet}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={`
-                          text-[10px] sm:text-sm px-1 sm:px-1.5 py-0.5 rounded
-                          ${editMode ? "cursor-pointer hover:bg-indigo-100" : ""}
-                          ${selectedPlanet === planet ? "bg-indigo-100 text-indigo-800" : ""}
-                        `}
-                        onClick={(e) => {
-                          if (editMode) {
-                            e.stopPropagation()
-                            setSelectedPlanet(planet)
-                          }
-                        }}
-                      >
-                        {planetAbbreviations[planet]}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {planetNames[planet].english} ({planetNames[planet].tamil})
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-            </div>
-          </DroppableHouse>
-
-          {/* Bottom row (houses 7, 8, 9, 10) */}
-          {traditionalLayout.slice(6, 10).map((house) => (
-            <DroppableHouse
-              key={`house-${house.house}`}
-              house={house}
-              onDrop={handlePlanetDrop}
-              isAscendant={false}
-              onHouseClick={handleHouseClick}
-              isDroppable={editMode}
-              isHighlighted={house.house === highlightedHouse}
-            >
-              <div className="flex-grow flex flex-wrap content-center justify-center gap-1 p-1">
-                {house.planets.map((planet) => (
-                  <Tooltip key={planet}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={`
-                          text-[10px] sm:text-sm px-1 sm:px-1.5 py-0.5 rounded
-                          ${editMode ? "cursor-pointer hover:bg-indigo-100" : ""}
-                          ${selectedPlanet === planet ? "bg-indigo-100 text-indigo-800" : ""}
-                        `}
-                        onClick={(e) => {
-                          if (editMode) {
-                            e.stopPropagation()
-                            setSelectedPlanet(planet)
-                          }
-                        }}
-                      >
-                        {planetAbbreviations[planet]}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {planetNames[planet].english} ({planetNames[planet].tamil})
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            </DroppableHouse>
-          ))}
         </div>
 
         {/* Planet Positions Table */}
         <div className="mt-4 p-4 border border-gray-200 rounded-xl bg-white shadow-sm print:hidden">
           <h3 className="text-sm font-medium mb-3 text-gray-700">Current Planet Positions:</h3>
           <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-y-2 gap-x-4">
-            {Object.entries(getPlanetPositions()).map(([planet, position]) => {
-              return (
-                <div key={planet} className="flex items-center text-sm">
-                  <div className="w-6 h-6 flex items-center justify-center mr-2 rounded-full bg-purple-100 text-purple-800 text-xs">
-                    {planetAbbreviations[planet]}
-                  </div>
-                  <div className="truncate">
-                    <span className="font-medium">{planetNames[planet].english}:</span>{" "}
-                    <span className="text-gray-700 text-xs">{getPlanetPositionName(position)}</span>
-                  </div>
+            {Object.entries(getCurrentPositions()).map(([planet, position]) => (
+              <div key={planet} className="flex items-center text-sm">
+                <div className="w-6 h-6 flex items-center justify-center mr-2 rounded-full bg-purple-100 text-purple-800 text-xs">
+                  {planetNames[planet] ? planetAbbreviations[planetNames[planet].tamil] : planet}
                 </div>
-              )
-            })}
+                <div className="truncate">
+                  <span className="font-medium">{planetNames[planet]?.english || planet}:</span>{" "}
+                  <span className="text-gray-700 text-xs">{getPlanetPositionName(position)}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -598,4 +527,3 @@ function EditableHoroscopeChart({
 }
 
 export default EditableHoroscopeChart
-

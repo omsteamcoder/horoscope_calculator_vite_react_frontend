@@ -54,7 +54,7 @@ function App() {
     setError(null)
 
     try {
-      const response = await fetch("http://localhost:5000/horoscope", {
+      const response = await fetch("http://localhost:5001/horoscope", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -80,6 +80,10 @@ function App() {
         yoga: data["யோகம்"],
         planetaryPositions,
         dasha: data["தசை இருப்பு"],
+        rasi_houses:data["ராசி வீடுகள்"],
+        navamsa_houses:data["நவாம்ச வீடுகள்"],
+        ayanasam:data["அயனாம்சம்"],
+        Lagna: data["உதய லக்னம்"]
       })
 
       // Reset chart positions
