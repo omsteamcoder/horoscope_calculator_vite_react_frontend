@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import axios from "axios"
 import HoroscopeForm from "./components/HoroscopeForm"
 import EditableHoroscopeChart from "./components/EditableHoroscopeChart"
 import HoroscopeDetails from "./components/HoroscopeDetails"
@@ -50,55 +51,63 @@ function App() {
     KETU: "கேது",
   }
 
-  const fetchHoroscope = async (formData) => {
-    setLoading(true)
-    setError(null)
+const fetchHoroscope = async (formData) => {
+  setLoading(true)
+  setError(null)
 
-    try {
-      const response = await fetch(`${BASE_URL}${ENDPOINT}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      })
+  try {
+    const response = await axios.post(`${BASE_URL}${ENDPOINT}`, formData)
 
-      if (!response.ok) throw new Error("Failed to fetch horoscope data")
+    // This only runs if the response is 2xx
+    const data = response.data // no need for .json() with axios
 
-      const data = await response.json()
+    const planetaryPositions = Array.isArray(data["நிராயன ஸ்புடங்கள்"]) ? data["நிராயன ஸ்புடங்கள்"] : []
 
-      const planetaryPositions = Array.isArray(data["நிராயன ஸ்புடங்கள்"]) ? data["நிராயன ஸ்புடங்கள்"] : []
+    setHoroscopeData({
+      name: data["பெயர்"],
+      date: data["பிறந்த நாள்"],
+      time: data["பிறந்த நேரம்"],
+      place: data["பிறந்த இடம்"],
+      latitude: data["அகலாங்கு"],
+      longitude: data["நெட்டாங்கு"],
+      rasi: data["ராசி"],
+      nakshatra: data["விண்மீன்"],
+      tithi: data["திதி"],
+      karana: data["கரணம்"],
+      yoga: data["யோகம்"],
+      planetaryPositions,
+      dasha: data["தசை இருப்பு"],
+      rasi_houses:data["ராசி வீடுகள்"],
+      navamsa_houses:data["நவாம்ச வீடுகள்"],
+      ayanasam:data["அயனாம்சம்"],
+      Lagna: data["உதய லக்னம்"],
+      sutham:data["சுத்த ஜாதகம்"]
+    })
 
-      setHoroscopeData({
-        name: data["பெயர்"],
-        date: data["பிறந்த நாள்"],
-        time: data["பிறந்த நேரம்"],
-        place: data["பிறந்த இடம்"],
-        latitude: data["அகலாங்கு"],
-        longitude: data["நெட்டாங்கு"],
-        rasi: data["ராசி"],
-        nakshatra: data["விண்மீன்"],
-        tithi: data["திதி"],
-        karana: data["கரணம்"],
-        yoga: data["யோகம்"],
-        planetaryPositions,
-        dasha: data["தசை இருப்பு"],
-        rasi_houses:data["ராசி வீடுகள்"],
-        navamsa_houses:data["நவாம்ச வீடுகள்"],
-        ayanasam:data["அயனாம்சம்"],
-        Lagna: data["உதய லக்னம்"],
-        sutham:data["சுத்த ஜாதகம்"]
-      })
-
-      // Reset chart positions
-      setChartPositions({
-        rasi: {},
-        navamsa: {},
-      })
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+    // Reset chart positions
+    setChartPositions({
+      rasi: {},
+      navamsa: {},
+    })
+  } catch (err) {
+    // Handle both network and server errors
+    if (err.response) {
+      // Server responded with a status other than 2xx
+      console.error('Server responded with:', err.response.data)
+      setError(`Server error: ${err.response.status} - ${err.response.data.message || 'Unknown error'}`)
+    } else if (err.request) {
+      // No response received
+      console.error('No response received:', err.request)
+      setError("No response from server. Please check your connection.")
+    } else {
+      // Something else went wrong
+      console.error('Error:', err.message)
+      setError(`Error: ${err.message}`)
     }
+  } finally {
+    setLoading(false)
   }
+}
 
   const handlePrint = () => {
     window.print()
